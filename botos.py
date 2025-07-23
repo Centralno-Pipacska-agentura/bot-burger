@@ -15,11 +15,11 @@ GUILD_ID = 617112204063539229  # ID tvojho Discord servera
 HLASKOVY_KANAL_ID = 1121507916374085632
 ADRIAN_LOG_KANAL_ID = 1396295485094105148
 
-# Známi ľudia na serveri, ktorý majú vlastné prezývky
+# Známi ľudia na serveri, ktorý majú vlastné prezývky a súbory pre vstup do hlasového kanála.
 ZNAMI_LUDIA = {
-    343823564493029376: ["Tomáš"],
-    106740016364937216: ["Jakub"],
-    431438944232669184: ["Matej"],
+    343823564493029376: ["Tomáš", "jixaw-metal-pipe-falling-sound.mp3"],
+    106740016364937216: ["Jakub", None],
+    431438944232669184: ["Matej", None],
     415894338438955008: ["Adrian", "boss-in-this-gym.mp3"],
     212945990221692928: ["Daimes", "daimesentry.mp3"],
 }
@@ -142,11 +142,20 @@ async def on_voice_state_update(member, before, after):
     Sleduje zmeny voice channel stavu a pripojí bota k používateľovi,
     ak sa pripojí do hlasového kanála.
     """
-    # Kontrola, či sa jedná o správneho používateľa
-    try:
-        subor = os.path.join("entrance", ZNAMI_LUDIA[member.id][1])
-    except Exception as e:
-        print(f"Človek nemá svoj entrance {e}")
+    # Kontrola, či je používateľ známy a má priradený súbor
+    # try:
+    #     subor = os.path.join("entrance", ZNAMI_LUDIA[member.id][1])
+    # except Exception as e:
+    #     print(f"Človek nemá svoj entrance {e}")
+    #     return
+    if member.id in ZNAMI_LUDIA:
+        if ZNAMI_LUDIA[member.id][1]:
+            subor = os.path.join("entrance", ZNAMI_LUDIA[member.id][1])
+        else:
+            print(f"Človek {member.name} nemá priradený súbor pre vstup.")
+            return
+    else:
+        print(f"Človek {member.name} nie je známy, nemá priradený súbor pre vstup.")
         return
 
     # Kontrola, či sa používateľ pripojil do hlasového kanála
