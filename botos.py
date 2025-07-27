@@ -142,6 +142,10 @@ async def on_voice_state_update(member, before, after):
     Sleduje zmeny voice channel stavu a pripojí bota k používateľovi,
     ak sa pripojí do hlasového kanála.
     """
+    #ak je to bot samotný, nerieš
+    if member.id == 1396106093519966283:
+        return
+    print(f"Latency: {client.latency * 1000:.2f} ms")
     # Kontrola, či je používateľ známy a má priradený súbor
     # try:
     #     subor = os.path.join("entrance", ZNAMI_LUDIA[member.id][1])
