@@ -3,6 +3,7 @@ from discord import app_commands
 import random
 import datetime
 import os
+import asyncio  # Pridajte tento import
 from dotenv import load_dotenv
 
 
@@ -142,19 +143,25 @@ async def on_voice_state_update(member, before, after):
     Sleduje zmeny voice channel stavu a pripojí bota k používateľovi,
     ak sa pripojí do hlasového kanála.
     """
-    #ak je to bot samotný, nerieš
+    # Ak je to bot samotný, nerieš
     if member.id == 1396106093519966283:
         return
+    
+    # Ak sa bot už pripája alebo je pripojený v tomto guild, počkaj
+    for voice_client in client.voice_clients:
+        if voice_client.guild == member.guild:
+            if voice_client.is_connected():
+                return  # Bot je už pripojený
+    
     print(f"Latency: {client.latency * 1000:.2f} ms")
+    
     # Kontrola, či je používateľ známy a má priradený súbor
-    # try:
-    #     subor = os.path.join("entrance", ZNAMI_LUDIA[member.id][1])
-    # except Exception as e:
-    #     print(f"Človek nemá svoj entrance {e}")
-    #     return
     if member.id in ZNAMI_LUDIA:
         if ZNAMI_LUDIA[member.id][1]:
             subor = os.path.join("entrance", ZNAMI_LUDIA[member.id][1])
+            if not os.path.exists(subor):
+                print(f"Súbor {subor} neexistuje.")
+                return
         else:
             print(f"Človek {member.name} nemá priradený súbor pre vstup.")
             return
@@ -165,34 +172,62 @@ async def on_voice_state_update(member, before, after):
     # Kontrola, či sa používateľ pripojil do hlasového kanála
     if before.channel is None and after.channel is not None:
         voice_channel = after.channel
+        
+        # Kontrola oprávnení
+        if not voice_channel.permissions_for(member.guild.me).connect:
+            print(f"Bot nemá oprávnenie pripojiť sa do kanála {voice_channel.name}")
+            return
 
+        voice_client = None
         try:
-            # Pripojenie bota do hlasového kanála
-            voice_client = await voice_channel.connect()
-
-            # Počkajte, chvíľu, nech každý má čas sa pripojiť
-            await discord.utils.sleep_until(
-                discord.utils.utcnow() + datetime.timedelta(seconds=0.2)
+            # Pripojenie bota do hlasového kanála s timeoutom
+            voice_client = await asyncio.wait_for(
+                voice_channel.connect(timeout=30.0, reconnect=False),
+                timeout=10.0
             )
+            
+            # Kratšie čakanie
+            await asyncio.sleep(0.5)
 
-            # Prehranie súboru boss-in-this-gym.mp3
-            voice_client.play(discord.FFmpegPCMAudio(subor))
+            # Kontrola, či je súbor dostupný a voice_client stále pripojený
+            if voice_client.is_connected():
+                # Vytvorenie audio source s lepšími možnosťami
+                audio_source = discord.FFmpegPCMAudio(
+                    subor,
+                    options='-bufsize 256k -ac 2 -ar 48000'
+                )
+                
+                voice_client.play(audio_source)
 
-            # Čakanie, kým sa súbor neprehráva
-            while voice_client.is_playing():
-                await discord.utils.sleep_until(discord.utils.utcnow())
+                # Čakanie s timeoutom, kým sa súbor neprehráva
+                max_wait = 30  # maximálne 30 sekúnd
+                waited = 0
+                while voice_client.is_playing() and waited < max_wait:
+                    await asyncio.sleep(0.5)
+                    waited += 0.5
 
-            # Odpojenie po prehratí
-            await voice_client.disconnect()
-
+        except asyncio.TimeoutError:
+            print(f"Timeout pri pripájaní do voice kanála pre {member.name}")
+        except discord.errors.ConnectionClosed as e:
+            print(f"Voice pripojenie zatvorené: {e.code}")
         except Exception as e:
-            print(f"Chyba pri pripájaní alebo prehrávaní: {e}")
+            print(f"Chyba pri pripájaní alebo prehrávaní pre {member.name}: {e}")
+        finally:
+            # Bezpečné odpojenie
+            if voice_client and voice_client.is_connected():
+                try:
+                    await voice_client.disconnect(force=True)
+                except Exception as e:
+                    print(f"Chyba pri odpájaní: {e}")
 
     # Odpojenie bota ak sa používateľ odpojí
     elif before.channel is not None and after.channel is None:
         for voice_client in client.voice_clients:
             if voice_client.guild == member.guild:
-                await voice_client.disconnect()
+                try:
+                    await voice_client.disconnect(force=True)
+                except Exception as e:
+                    print(f"Chyba pri odpájaní po odchode používateľa: {e}")
 
 
 @client.event
