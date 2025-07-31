@@ -180,6 +180,8 @@ async def on_voice_state_update(member, before, after):
 
         voice_client = None
         try:
+            print(f"Pripájanie pre {member.name}")
+            
             # Pripojenie bota do hlasového kanála s timeoutom
             voice_client = await asyncio.wait_for(
                 voice_channel.connect(timeout=30.0, reconnect=False),
@@ -189,12 +191,12 @@ async def on_voice_state_update(member, before, after):
             # Kratšie čakanie
             await asyncio.sleep(0.5)
 
-            # Kontrola, či je súbor dostupný a voice_client stále pripojený
+            # Kontrola, či je voice_client stále pripojený
             if voice_client.is_connected():
-                # Vytvorenie audio source s lepšími možnosťami
+                # Vytvorenie audio source s optimalizovanými možnosťami (bez duplicitných -ac a -ar)
                 audio_source = discord.FFmpegPCMAudio(
                     subor,
-                    options='-bufsize 256k -ac 2 -ar 48000'
+                    options='-bufsize 256k -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5'
                 )
                 
                 voice_client.play(audio_source)
