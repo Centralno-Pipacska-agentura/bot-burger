@@ -39,7 +39,6 @@ intents.guilds = True
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
 
-
 @client.event
 async def on_ready():
     """Potvrdí, že bot je prihlásený a synchronizuje príkazy."""
@@ -57,6 +56,13 @@ async def save_hlaska(interaction: discord.Interaction, message: discord.Message
     Uloží vybranú správu ako hlášku do špecifikovaného kanála
     a pridá informácie o autorovi.
     """
+    if interaction.guild_id != GUILD_ID:
+        await interaction.response.send_message(
+            "Tento príkaz je možné použiť iba na správach z konkrétneho servera.",
+            ephemeral=True,
+        )
+        return
+
     hlaskovy_kanal = client.get_channel(HLASKOVY_KANAL_ID)
 
     if not hlaskovy_kanal:
@@ -100,6 +106,13 @@ async def nahodna_hlaska(interaction: discord.Interaction):
     """
     Vyberie a pošle náhodnú správu z preddefinovaného hláškového kanála.
     """
+    if interaction.guild_id != GUILD_ID:
+        await interaction.response.send_message(
+            "Tento príkaz je možné použiť iba na správach z konkrétneho servera.",
+            ephemeral=True,
+        )
+        return
+
     hlaskovy_kanal = client.get_channel(HLASKOVY_KANAL_ID)
 
     if not hlaskovy_kanal:
@@ -239,6 +252,10 @@ async def on_message(message):
     Sleduje správy od používateľa Adrian a preposiela ich do špecifikovaného kanála,
     ak nie sú linky alebo obrázky.
     """
+    # Kontrola, či je interakcia na správnom serveri
+    if message.guild_id != GUILD_ID:
+        return
+
     # Ignorovať správy od botov
     if message.author.bot:
         return
