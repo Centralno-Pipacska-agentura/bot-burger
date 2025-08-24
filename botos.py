@@ -18,7 +18,7 @@ ADRIAN_LOG_KANAL_ID = 1396295485094105148
 
 # Známi ľudia na serveri, ktorý majú vlastné prezývky a súbory pre vstup do hlasového kanála.
 ZNAMI_LUDIA = {
-    343823564493029376: ["Tomáš", "cartoon.mp3"],
+    343823564493029376: ["Tomáš", "jixaw-metal-pipe-falling-sound.mp3"],
     106740016364937216: ["Jakub", "hoooo-snoring.mp3"],
     431438944232669184: ["Matej", "cartoon.mp3"],
     415894338438955008: ["Adrian", "boss-in-this-gym.mp3"],
