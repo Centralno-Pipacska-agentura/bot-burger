@@ -24,11 +24,11 @@ ZNAMI_LUDIA = {
     415894338438955008: ["Adrian", "boss-in-this-gym.mp3"],
     212945990221692928: ["Daimes", "daimesentry.mp3"],
     533283601580687374: ["Dávid", "x-files-theme.mp3"],
-    697847107675226213: ["Grín", "cartoon.mp3"],
+    697847107675226213: ["Grín", "cartoon.mp3"]
 }
 
 # Adrianove ID pre kontextové menu
-ADRIAN_ID = 415894338438955008  # ID používateľa,
+ADRIAN_ID = 415894338438955008  # ID používateľa Adrian
 
 # Nastavenie Intents, aby bot mohol čítať správy a reagovať na interakcie
 intents = discord.Intents.default()
