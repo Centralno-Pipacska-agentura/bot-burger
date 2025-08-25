@@ -254,7 +254,7 @@ async def on_message(message):
     ak nie sú linky alebo obrázky.
     """
     # Kontrola, či je interakcia na správnom serveri
-    if message.guild_id != GUILD_ID:
+    if not message.guild or message.guild.id != GUILD_ID:
         return
 
     # Ignorovať správy od botov
