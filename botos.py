@@ -18,13 +18,13 @@ ADRIAN_LOG_KANAL_ID = 1396295485094105148
 
 # Známi ľudia na serveri, ktorý majú vlastné prezývky a súbory pre vstup do hlasového kanála.
 ZNAMI_LUDIA = {
-    343823564493029376: ["Tomáš", "jixaw-metal-pipe-falling-sound.mp3"],
+    343823564493029376: ["Tomáš", "daimesentry.mp3"],
     106740016364937216: ["Jakub", "hoooo-snoring.mp3"],
     431438944232669184: ["Matej", "cartoon.mp3"],
     415894338438955008: ["Adrian", "boss-in-this-gym.mp3"],
     212945990221692928: ["Daimes", "daimesentry.mp3"],
     533283601580687374: ["Dávid", "x-files-theme.mp3"],
-    697847107675226213: ["Grín", "cartoon.mp3"]
+    697847107675226213: ["Grín", "cartoon.mp3"],
 }
 
 # Adrianove ID pre kontextové menu
@@ -39,6 +39,7 @@ intents.guilds = True
 # Vytvorenie inštancie bota
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
+
 
 @client.event
 async def on_ready():
@@ -127,9 +128,7 @@ async def nahodna_hlaska(interaction: discord.Interaction):
     try:
         # Načítanie posledných 200 správ z kanála (kvôli limitácii API)
         async for message in hlaskovy_kanal.history(limit=200):
-            if (
-                not message.author.bot
-            ):  # Ignorujeme správy od botov, ak nechceme, aby sa hláškovali vlastné správy bota
+            if not message.author.bot:  # Ignorujeme správy od botov, ak nechceme, aby sa hláškovali vlastné správy bota
                 messages.append(message.content)
 
         if not messages:
@@ -161,15 +160,15 @@ async def on_voice_state_update(member, before, after):
     # Ak je to bot samotný, nerieš
     if member.id == 1396106093519966283:
         return
-    
+
     # Ak sa bot už pripája alebo je pripojený v tomto guild, počkaj
     for voice_client in client.voice_clients:
         if voice_client.guild == member.guild:
             if voice_client.is_connected():
                 return  # Bot je už pripojený
-    
+
     print(f"Latency: {client.latency * 1000:.2f} ms")
-    
+
     # Kontrola, či je používateľ známy a má priradený súbor
     if member.id in ZNAMI_LUDIA:
         if ZNAMI_LUDIA[member.id][1]:
@@ -187,7 +186,7 @@ async def on_voice_state_update(member, before, after):
     # Kontrola, či sa používateľ pripojil do hlasového kanála
     if before.channel is None and after.channel is not None:
         voice_channel = after.channel
-        
+
         # Kontrola oprávnení
         if not voice_channel.permissions_for(member.guild.me).connect:
             print(f"Bot nemá oprávnenie pripojiť sa do kanála {voice_channel.name}")
@@ -196,13 +195,12 @@ async def on_voice_state_update(member, before, after):
         voice_client = None
         try:
             print(f"Pripájanie pre {member.name}")
-            
+
             # Pripojenie bota do hlasového kanála s timeoutom
             voice_client = await asyncio.wait_for(
-                voice_channel.connect(timeout=30.0, reconnect=False),
-                timeout=10.0
+                voice_channel.connect(timeout=30.0, reconnect=False), timeout=10.0
             )
-            
+
             # Kratšie čakanie
             await asyncio.sleep(0.5)
 
@@ -211,9 +209,9 @@ async def on_voice_state_update(member, before, after):
                 # Vytvorenie audio source s optimalizovanými možnosťami (bez duplicitných -ac a -ar)
                 audio_source = discord.FFmpegPCMAudio(
                     subor,
-                    options='-bufsize 256k -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5'
+                    options="-bufsize 256k -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
                 )
-                
+
                 voice_client.play(audio_source)
 
                 # Čakanie s timeoutom, kým sa súbor neprehráva
