@@ -27,10 +27,6 @@ ZNAMI_LUDIA = {
     533283601580687374: ["Dávid", "x-files-theme.mp3"],
     697847107675226213: ["Grín", "cartoon.mp3"],
 }
-# Počas Halloweenu zmeň mp3 na jumpscare.mp3
-if HALLOWEEN:
-    for user_id, (nickname, sound_file) in ZNAMI_LUDIA.items():
-        ZNAMI_LUDIA[user_id][1] = "jumpscare.mp3"
 
 # Adrianove ID pre kontextové menu
 ADRIAN_ID = 415894338438955008  # ID používateľa Adrian
@@ -177,7 +173,7 @@ async def on_voice_state_update(member, before, after):
     # Kontrola, či je používateľ známy a má priradený súbor
     if member.id in ZNAMI_LUDIA:
         if ZNAMI_LUDIA[member.id][1]:
-            subor = os.path.join("entrance", ZNAMI_LUDIA[member.id][1])
+            subor = os.path.join("entrance", ZNAMI_LUDIA[member.id][1] if not HALLOWEEN else "jumpscare.mp3")
             if not os.path.exists(subor):
                 print(f"Súbor {subor} neexistuje.")
                 return
