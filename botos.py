@@ -15,6 +15,7 @@ GUILD_ID = 617112204063539229  # ID tvojho Discord servera
 # Nahraďte ho skutočným ID kanála, kde chcete, aby bot pracoval.
 HLASKOVY_KANAL_ID = 1121507916374085632
 ADRIAN_LOG_KANAL_ID = 1396295485094105148
+HALLOWEEN = True  # Nastavte na True počas Halloween obdobia
 
 # Známi ľudia na serveri, ktorý majú vlastné prezývky a súbory pre vstup do hlasového kanála.
 ZNAMI_LUDIA = {
@@ -26,6 +27,10 @@ ZNAMI_LUDIA = {
     533283601580687374: ["Dávid", "x-files-theme.mp3"],
     697847107675226213: ["Grín", "cartoon.mp3"],
 }
+# Počas Halloweenu zmeň mp3 na jumpscare.mp3
+if HALLOWEEN:
+    for user_id, (nickname, sound_file) in ZNAMI_LUDIA.items():
+        ZNAMI_LUDIA[user_id][1] = "jumpscare.mp3"
 
 # Adrianove ID pre kontextové menu
 ADRIAN_ID = 415894338438955008  # ID používateľa Adrian
