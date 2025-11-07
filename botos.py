@@ -15,7 +15,7 @@ GUILD_ID = 617112204063539229  # ID tvojho Discord servera
 # Nahraďte ho skutočným ID kanála, kde chcete, aby bot pracoval.
 HLASKOVY_KANAL_ID = 1121507916374085632
 ADRIAN_LOG_KANAL_ID = 1396295485094105148
-HALLOWEEN = True  # Nastavte na True počas Halloween obdobia
+HALLOWEEN = False  # Nastavte na True počas Halloween obdobia
 
 # Známi ľudia na serveri, ktorý majú vlastné prezývky a súbory pre vstup do hlasového kanála.
 ZNAMI_LUDIA = {
@@ -173,7 +173,10 @@ async def on_voice_state_update(member, before, after):
     # Kontrola, či je používateľ známy a má priradený súbor
     if member.id in ZNAMI_LUDIA:
         if ZNAMI_LUDIA[member.id][1]:
-            subor = os.path.join("entrance", ZNAMI_LUDIA[member.id][1] if not HALLOWEEN else "jumpscare.mp3")
+            subor = os.path.join(
+                "entrance",
+                ZNAMI_LUDIA[member.id][1] if not HALLOWEEN else "jumpscare.mp3",
+            )
             if not os.path.exists(subor):
                 print(f"Súbor {subor} neexistuje.")
                 return
