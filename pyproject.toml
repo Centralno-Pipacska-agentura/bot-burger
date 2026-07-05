@@ -5,8 +5,9 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "discord.py@git+https://github.com/Rapptz/discord.py.git@master",
+    "davey>=0.1.4",
+    "discord-py>=2.7.1",
     "dotenv>=0.9.9",
-    "pynacl>=1.5.0",
     "ffmpeg-python>=0.2.0",
+    "pynacl>=1.6.2",
 ]

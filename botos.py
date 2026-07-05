@@ -4,6 +4,8 @@ import random
 import datetime
 import os
 import asyncio  # Pridajte tento import
+import json
+import subprocess
 from dotenv import load_dotenv
 
 
@@ -17,16 +19,44 @@ HLASKOVY_KANAL_ID = 1121507916374085632
 ADRIAN_LOG_KANAL_ID = 1396295485094105148
 HALLOWEEN = False  # Nastavte na True počas Halloween obdobia
 
-# Známi ľudia na serveri, ktorý majú vlastné prezývky a súbory pre vstup do hlasového kanála.
-ZNAMI_LUDIA = {
-    343823564493029376: ["Tomáš", "jixaw-metal-pipe-falling-sound.mp3"],
-    106740016364937216: ["Jakub", "hoooo-snoring.mp3"],
-    431438944232669184: ["Matej", "cartoon.mp3"],
-    415894338438955008: ["Adrian", "boss-in-this-gym.mp3"],
-    212945990221692928: ["Daimes", "daimesentry.mp3"],
-    533283601580687374: ["Dávid", "x-files-theme.mp3"],
-    697847107675226213: ["Grín", "cartoon.mp3"],
-}
+MAPPING_FILE = "entrance_mapping.json"
+
+def load_entrance_mapping():
+    if not os.path.exists(MAPPING_FILE):
+        return {}
+    try:
+        with open(MAPPING_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            # Prevedenie textových kľúčov na integer pre ID používateľov
+            return {int(k): v for k, v in data.items()}
+    except Exception as e:
+        print(f"Chyba pri načítaní mappingu: {e}")
+        return {}
+
+def save_entrance_mapping(mapping):
+    try:
+        # Prevedenie kľúčov na string pre uloženie do JSONu
+        data = {str(k): v for k, v in mapping.items()}
+        with open(MAPPING_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"Chyba pri ukladaní mappingu: {e}")
+
+def normalize_audio(input_path: str, output_path: str) -> bool:
+    """Normalizuje hlasitosť pomocou ffmpeg filtra loudnorm (EBU R128)."""
+    command = [
+        "ffmpeg",
+        "-i", input_path,
+        "-filter:a", "loudnorm=I=-16:TP=-1.5:LRA=11",
+        "-y",
+        output_path
+    ]
+    try:
+        subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"Chyba pri normalizácii zvuku {input_path}: {e.stderr.decode('utf-8', errors='ignore')}")
+        return False
 
 # Adrianove ID pre kontextové menu
 ADRIAN_ID = 415894338438955008  # ID používateľa Adrian
@@ -76,9 +106,10 @@ async def save_hlaska(interaction: discord.Interaction, message: discord.Message
         return
 
     # Formátovanie hlášky
-    if message.author.id in ZNAMI_LUDIA:
+    znami_ludia = load_entrance_mapping()
+    if message.author.id in znami_ludia:
         # Ak je autor známy, použijeme jeho prezývku
-        author_name = ZNAMI_LUDIA[message.author.id][0]
+        author_name = znami_ludia[message.author.id]["name"]
     else:
         # Inak použijeme štandardné meno autora
         author_name = message.author.display_name
@@ -152,6 +183,126 @@ async def nahodna_hlaska(interaction: discord.Interaction):
         )
 
 
+# --- Slash príkazy pre správu vstupných zvukov ---
+
+
+@tree.command(name="nastav_vstup", description="Nastaví a normalizuje tvoj vlastný vstupný zvuk pri pripojení do voice kanála.")
+@app_commands.describe(
+    subor="Zvukový súbor (napr. MP3, WAV, OGG, M4A)",
+    meno="Prezývka, ktorú bot použije pri tvojich hláškach (voliteľné)"
+)
+async def nastav_vstup(
+    interaction: discord.Interaction,
+    subor: discord.Attachment,
+    meno: str = None
+):
+    # Kontrola typu súboru podľa koncovky alebo content_type
+    ext = os.path.splitext(subor.filename.lower())[1]
+    is_audio = (subor.content_type and subor.content_type.startswith("audio/")) or ext in ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac', '.webm']
+    
+    if not is_audio:
+        await interaction.response.send_message(
+            "Prosím, nahraj platný zvukový súbor (napr. MP3, WAV, OGG, M4A)!",
+            ephemeral=True
+        )
+        return
+
+    # Obmedzenie veľkosti súboru na 10MB
+    if subor.size > 10 * 1024 * 1024:
+        await interaction.response.send_message(
+            "Súbor je príliš veľký! Maximálna veľkosť je 10MB.",
+            ephemeral=True
+        )
+        return
+
+    await interaction.response.defer(ephemeral=True)
+
+    temp_dir = os.path.join("entrance", "temp")
+    if not os.path.exists(temp_dir):
+        os.makedirs(temp_dir)
+        
+    temp_filename = f"temp_{interaction.user.id}_{subor.filename}"
+    temp_path = os.path.join(temp_dir, temp_filename)
+    
+    try:
+        # Uloženie dočasného súboru
+        await subor.save(temp_path)
+        
+        normalized_filename = f"user_{interaction.user.id}.mp3"
+        normalized_path = os.path.join("entrance", normalized_filename)
+        
+        # Normalizácia
+        success = normalize_audio(temp_path, normalized_path)
+        
+        if not success:
+            await interaction.followup.send(
+                "Nepodarilo sa normalizovať alebo spracovať zvukový súbor. Skontroluj, či nie je poškodený.",
+                ephemeral=True
+            )
+            return
+            
+        # Aktualizácia mappingu
+        znami_ludia = load_entrance_mapping()
+        
+        # Ak meno nie je špecifikované, použijeme existujúce meno alebo display name na Discorde
+        display_name = meno or (znami_ludia.get(interaction.user.id, {}).get("name") or interaction.user.display_name)
+        
+        znami_ludia[interaction.user.id] = {
+            "name": display_name,
+            "sound_file": normalized_filename
+        }
+        save_entrance_mapping(znami_ludia)
+        
+        await interaction.followup.send(
+            f"Tvoj vstupný zvuk bol úspešne uložený a normalizovaný! Prezývka: **{display_name}**.",
+            ephemeral=True
+        )
+    except Exception as e:
+        print(f"Chyba pri spracovaní nahraného zvuku: {e}")
+        await interaction.followup.send(
+            f"Nastala neočakávaná chyba pri spracovaní zvuku: {e}",
+            ephemeral=True
+        )
+    finally:
+        # Vyčistenie dočasného súboru
+        if os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except Exception as e:
+                print(f"Chyba pri mazaní dočasného súboru: {e}")
+
+
+@tree.command(name="odstran_vstup", description="Odstráni tvoj vstupný zvuk pre príchod do voice kanálu.")
+async def odstran_vstup(interaction: discord.Interaction):
+    znami_ludia = load_entrance_mapping()
+    
+    if interaction.user.id not in znami_ludia:
+        await interaction.response.send_message(
+            "Nemáš nastavený žiadny vstupný zvuk.",
+            ephemeral=True
+        )
+        return
+        
+    await interaction.response.defer(ephemeral=True)
+    
+    user_info = znami_ludia.pop(interaction.user.id)
+    sound_file = user_info.get("sound_file")
+    
+    if sound_file:
+        file_path = os.path.join("entrance", sound_file)
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception as e:
+                print(f"Chyba pri mazaní súboru {file_path}: {e}")
+                
+    save_entrance_mapping(znami_ludia)
+    await interaction.followup.send(
+        "Tvoj vstupný zvuk a prezývka boli odstránené.",
+        ephemeral=True
+    )
+
+
 @client.event
 async def on_voice_state_update(member, before, after):
     """
@@ -170,12 +321,14 @@ async def on_voice_state_update(member, before, after):
 
     print(f"Latency: {client.latency * 1000:.2f} ms")
 
+    znami_ludia = load_entrance_mapping()
     # Kontrola, či je používateľ známy a má priradený súbor
-    if member.id in ZNAMI_LUDIA:
-        if ZNAMI_LUDIA[member.id][1]:
+    if member.id in znami_ludia:
+        sound_file = znami_ludia[member.id].get("sound_file")
+        if sound_file:
             subor = os.path.join(
                 "entrance",
-                ZNAMI_LUDIA[member.id][1] if not HALLOWEEN else "jumpscare.mp3",
+                sound_file if not HALLOWEEN else "jumpscare.mp3",
             )
             if not os.path.exists(subor):
                 print(f"Súbor {subor} neexistuje.")
