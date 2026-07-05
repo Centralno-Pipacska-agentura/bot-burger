@@ -47,7 +47,7 @@ def normalize_audio(input_path: str, output_path: str) -> bool:
     command = [
         "ffmpeg",
         "-i", input_path,
-        "-filter:a", "loudnorm=I=-16:TP=-1.5:LRA=11",
+        "-filter:a", "loudnorm=I=-23:TP=-1.5:LRA=11",
         "-y",
         output_path
     ]

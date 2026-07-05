@@ -8,13 +8,13 @@ BACKUP_DIR = "entrance_backup"
 def normalize_file(input_path, output_path):
     print(f"Normalizing {input_path} -> {output_path}")
     # Using ffmpeg's EBU R128 loudnorm filter.
-    # I=-16: Target loudness is -16 LUFS (good standard for online audio/Discord bots).
+    # I=-23: Target loudness is -23 LUFS (quieter broadcast standard for comfortable headphone usage).
     # TP=-1.5: Target true peak is -1.5 dBTP to prevent clipping.
     # LRA=11: Loudness range target.
     command = [
         "ffmpeg",
         "-i", input_path,
-        "-filter:a", "loudnorm=I=-16:TP=-1.5:LRA=11",
+        "-filter:a", "loudnorm=I=-23:TP=-1.5:LRA=11",
         "-y",
         output_path
     ]
@@ -45,9 +45,12 @@ def main():
         src_path = os.path.join(ENTRANCE_DIR, file_name)
         backup_path = os.path.join(BACKUP_DIR, file_name)
         
-        # Copy to backup first
-        print(f"Backing up {file_name} to {BACKUP_DIR}")
-        shutil.copy2(src_path, backup_path)
+        # Copy to backup first, ONLY if backup doesn't already exist to preserve the original unmodified audio!
+        if not os.path.exists(backup_path):
+            print(f"Backing up {file_name} to {BACKUP_DIR}")
+            shutil.copy2(src_path, backup_path)
+        else:
+            print(f"Using existing backup for {file_name}")
         
         # Normalize from backup back to original location
         if normalize_file(backup_path, src_path):
@@ -57,3 +60,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
